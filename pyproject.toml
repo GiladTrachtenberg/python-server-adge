@@ -12,6 +12,9 @@ dependencies = [
     "aerich>=0.8,<1",
     "PyJWT>=2.11,<3",
     "argon2-cffi>=25.1,<26",
+    "celery[redis]>=5.4,<6",
+    "redis>=4.5.5,<6.5",
+    "minio>=7.2,<8",
 ]
 
 [project.optional-dependencies]
@@ -21,7 +24,7 @@ dev = [
     "pytest>=8,<9",
     "pytest-asyncio>=0.26,<1",
     "httpx>=0.28,<1",
-    "testcontainers[postgres]>=4.14,<5",
+    "testcontainers[postgres,minio]>=4.14,<5",
 ]
 
 [build-system]
@@ -55,6 +58,10 @@ select = [
 [tool.ruff.lint.per-file-ignores]
 "src/*_schemas.py" = ["TCH003", "TCH001"]
 "src/schemas.py" = ["TCH003", "TCH001"]
+"src/jobs_schemas.py" = ["TCH003", "TCH001"]
+"src/jobs.py" = ["TCH003", "TCH001"]
+"src/sse.py" = ["TCH003", "TCH001"]
+"src/tasks.py" = ["TCH001"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["src"]
@@ -65,6 +72,15 @@ strict = true
 warn_return_any = true
 warn_unused_configs = true
 plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["celery.*", "minio.*", "redis.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["src.tasks", "src.sse"]
+disallow_untyped_calls = false
+disallow_untyped_decorators = false
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

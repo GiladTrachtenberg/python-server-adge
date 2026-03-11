@@ -70,18 +70,24 @@ def create_access_token(user_id: str, settings: Settings) -> str:
         "exp": expire,
     }
     return jwt.encode(
-        payload, settings.jwt_secret_key, algorithm=settings.jwt_algorithm,
+        payload,
+        settings.jwt_secret_key,
+        algorithm=settings.jwt_algorithm,
     )
 
 
 def decode_access_token(token: str, settings: Settings) -> dict[str, Any]:
     return jwt.decode(
-        token, settings.jwt_secret_key, algorithms=[settings.jwt_algorithm],
+        token,
+        settings.jwt_secret_key,
+        algorithms=[settings.jwt_algorithm],
     )
 
 
 def _error(
-    code: str, message: str, status_code: int,
+    code: str,
+    message: str,
+    status_code: int,
 ) -> JSONResponse:
     body = ErrorResponse(error=ErrorBody(code=code, message=message))
     return JSONResponse(status_code=status_code, content=body.model_dump())
@@ -118,7 +124,8 @@ async def _create_token_pair(
 
 
 async def get_current_user(
-    request: Request, settings: SettingsDep,
+    request: Request,
+    settings: SettingsDep,
 ) -> User:
     auth_header = request.headers.get("Authorization")
     if not auth_header or not auth_header.startswith("Bearer "):
@@ -149,11 +156,15 @@ async def register(body: RegisterRequest) -> JSONResponse:
         user = await User.create(email=body.email, password_hash=hashed)
     except IntegrityError:
         return _error(
-            "conflict", "Email already registered", status.HTTP_409_CONFLICT,
+            "conflict",
+            "Email already registered",
+            status.HTTP_409_CONFLICT,
         )
 
     data = UserResponse(
-        id=user.id, email=user.email, created_at=user.created_at,
+        id=user.id,
+        email=user.email,
+        created_at=user.created_at,
     )
     return JSONResponse(
         status_code=status.HTTP_201_CREATED,
@@ -172,7 +183,8 @@ async def login(body: LoginRequest, settings: SettingsDep) -> JSONResponse:
         return _error(*_INVALID_CREDS, _HTTP_401)
 
     access_token, raw_refresh = await _create_token_pair(
-        user.id, settings,
+        user.id,
+        settings,
     )
     data = TokenResponse(
         access_token=access_token,
@@ -184,12 +196,12 @@ async def login(body: LoginRequest, settings: SettingsDep) -> JSONResponse:
 
 @auth_router.post("/refresh")
 async def refresh(
-    body: RefreshRequest, settings: SettingsDep,
+    body: RefreshRequest,
+    settings: SettingsDep,
 ) -> JSONResponse:
     token_hash = hash_token(body.refresh_token)
-    stored = (
-        await RefreshToken.get_or_none(token_hash=token_hash)
-        .select_related("user")
+    stored = await RefreshToken.get_or_none(token_hash=token_hash).select_related(
+        "user"
     )
 
     if stored is None:
@@ -200,7 +212,9 @@ async def refresh(
             family_id=stored.family_id,
         ).update(revoked=True)
         return _error(
-            "unauthorized", "Token reuse detected", _HTTP_401,
+            "unauthorized",
+            "Token reuse detected",
+            _HTTP_401,
         )
 
     now = datetime.now(UTC)
@@ -211,14 +225,18 @@ async def refresh(
     )
     if expires_at < now:
         return _error(
-            "unauthorized", "Refresh token expired", _HTTP_401,
+            "unauthorized",
+            "Refresh token expired",
+            _HTTP_401,
         )
 
     stored.revoked = True
     await stored.save(update_fields=["revoked"])
 
     access_token, raw_refresh = await _create_token_pair(
-        stored.user.id, settings, family_id=stored.family_id,
+        stored.user.id,
+        settings,
+        family_id=stored.family_id,
     )
 
     data = TokenResponse(
@@ -232,6 +250,8 @@ async def refresh(
 @auth_router.get("/me")
 async def me(user: CurrentUser) -> JSONResponse:
     data = UserResponse(
-        id=user.id, email=user.email, created_at=user.created_at,
+        id=user.id,
+        email=user.email,
+        created_at=user.created_at,
     )
     return JSONResponse(content={"data": data.model_dump(mode="json")})

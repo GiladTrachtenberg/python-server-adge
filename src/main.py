@@ -24,6 +24,15 @@ async def _lifespan(app: FastAPI) -> AsyncGenerator[None]:
     settings: Settings = app.state.settings
     config = get_tortoise_config(settings.database_url)
     await Tortoise.init(config=config)
+
+    try:
+        from src.storage import ensure_bucket, get_minio_client
+
+        client = get_minio_client(settings)
+        ensure_bucket(client, settings.minio_bucket)
+    except Exception as exc:
+        logger.warning("MinIO bucket init failed (worker will retry): %s", exc)
+
     try:
         yield
     finally:
@@ -90,6 +99,21 @@ def _register_health_routes(app: FastAPI) -> None:
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 content=HealthResponse(status="unavailable").model_dump(),
             )
+
+        try:
+            import redis.asyncio as aioredis
+
+            settings: Settings = app.state.settings
+            r = aioredis.from_url(settings.redis_url)
+            await r.ping()
+            await r.aclose()
+        except Exception as exc:
+            logger.warning("readyz Redis check failed: %s", exc)
+            return JSONResponse(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content=HealthResponse(status="unavailable").model_dump(),
+            )
+
         return JSONResponse(
             content=HealthResponse(status="ok").model_dump(),
         )
@@ -99,8 +123,10 @@ def _register_api_router(app: FastAPI, settings: Settings) -> None:
     router = APIRouter(prefix=settings.api_v1_prefix)
 
     from src.auth import auth_router
+    from src.jobs import jobs_router
+    from src.sse import sse_router
 
     router.include_router(auth_router)
+    router.include_router(jobs_router)
+    router.include_router(sse_router)
     app.include_router(router)
-
-

@@ -21,6 +21,19 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 15
     refresh_token_expire_days: int = 1
 
+    # Redis (pub/sub for SSE)
+    redis_url: str = "redis://localhost:6379/0"
+
+    # Celery (task broker — separate Redis DB)
+    celery_broker_url: str = "redis://localhost:6379/1"
+
+    # MinIO (object storage)
+    minio_endpoint: str = "localhost:9000"
+    minio_access_key: str = "minioadmin"
+    minio_secret_key: str = "minioadmin"
+    minio_bucket: str = "video-demo"
+    minio_secure: bool = False
+
     model_config = {"env_prefix": "", "case_sensitive": False}
 
     @model_validator(mode="after")
@@ -31,8 +44,7 @@ class Settings(BaseSettings):
                 raise ValueError(msg)
             if self.jwt_secret_key == _LOCAL_DEV_JWT_SECRET:
                 msg = (
-                    "JWT_SECRET_KEY must be set explicitly"
-                    " in production (debug=False)"
+                    "JWT_SECRET_KEY must be set explicitly in production (debug=False)"
                 )
                 raise ValueError(msg)
         return self

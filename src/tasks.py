@@ -1,0 +1,80 @@
+from __future__ import annotations
+
+import asyncio
+import json
+import logging
+import random
+from datetime import UTC, datetime
+
+import redis.asyncio as aioredis
+from celery import Celery
+from tortoise import Tortoise, connections
+
+from src.config import Settings
+from src.db import get_tortoise_config
+from src.models import JobStatus
+from src.storage import ensure_bucket, get_minio_client, upload_bytes
+
+logger: logging.Logger = logging.getLogger(__name__)
+
+celery_app: Celery = Celery("video-demo")
+
+
+async def _publish(redis_url: str, job_id: str, status: str) -> None:
+    """Publish a job status event to Redis pub/sub."""
+    r = aioredis.from_url(redis_url)
+    try:
+        payload = json.dumps({"job_id": job_id, "status": status})
+        await r.publish(f"jobs:{job_id}:status", payload)
+    finally:
+        await r.aclose()
+
+
+async def _process(job_id: str, settings: Settings) -> None:
+    """Async core of the process_job task."""
+    from src.models import Job
+
+    config = get_tortoise_config(settings.database_url)
+    await Tortoise.init(config=config)
+    try:
+        job = await Job.get(id=job_id)
+
+        job.status = JobStatus.PROCESSING
+        await job.save(update_fields=["status", "updated_at"])
+        await _publish(settings.redis_url, job_id, "processing")
+
+        await asyncio.sleep(random.uniform(3, 5))
+
+        minio = get_minio_client(settings)
+        ensure_bucket(minio, settings.minio_bucket)
+        key = f"jobs/{job_id}/output.txt"
+        content = f"Job {job_id} completed at {datetime.now(UTC).isoformat()}"
+        upload_bytes(minio, settings.minio_bucket, key, content.encode())
+
+        job.status = JobStatus.COMPLETED
+        job.minio_object_key = key
+        await job.save(update_fields=["status", "minio_object_key", "updated_at"])
+        await _publish(settings.redis_url, job_id, "completed")
+
+    except Exception:
+        logger.exception("Job %s failed", job_id)
+        try:
+            job = await Job.get(id=job_id)
+            job.status = JobStatus.FAILED
+            job.error_message = "Processing failed"
+            await job.save(update_fields=["status", "error_message", "updated_at"])
+            await _publish(settings.redis_url, job_id, "failed")
+        except Exception:
+            logger.exception("Failed to mark job %s as failed", job_id)
+    finally:
+        await connections.close_all()
+
+
+@celery_app.task(name="process_job")
+def process_job(job_id: str) -> None:
+    """Celery entry point — bridges sync Celery with async internals."""
+    from src.config import get_settings
+
+    settings = get_settings()
+    celery_app.conf.broker_url = settings.celery_broker_url
+    asyncio.run(_process(job_id, settings))
