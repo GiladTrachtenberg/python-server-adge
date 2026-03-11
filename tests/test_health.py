@@ -13,11 +13,11 @@ async def test_healthz_returns_ok(client: AsyncClient) -> None:
     assert response.json() == {"status": "ok"}
 
 
-async def test_readyz_returns_ok(client: AsyncClient) -> None:
+async def test_readyz_without_db_returns_503(client: AsyncClient) -> None:
     response = await client.get("/readyz")
 
-    assert response.status_code == 200
-    assert response.json() == {"status": "ok"}
+    assert response.status_code == 503
+    assert response.json() == {"status": "unavailable"}
 
 
 async def test_healthz_method_not_allowed(client: AsyncClient) -> None:

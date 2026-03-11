@@ -4,19 +4,22 @@ version = "0.1.0"
 description = "Video processing demo — FastAPI + Celery + Redis + Postgres + MinIO"
 requires-python = ">=3.14"
 dependencies = [
-    "fastapi>=0.115,<1",
-    "uvicorn[standard]>=0.34,<1",
-    "pydantic>=2.10,<3",
-    "pydantic-settings>=2.7,<3",
+    "fastapi>=0.135,<1",
+    "uvicorn[standard]>=0.41,<1",
+    "pydantic>=2.12,<3",
+    "pydantic-settings>=2.13,<3",
+    "tortoise-orm[asyncpg]>=1.1,<2",
+    "aerich>=0.8,<1",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "ruff>=0.9,<1",
-    "mypy>=1.14,<2",
+    "ruff>=0.15,<1",
+    "mypy>=1.19,<2",
     "pytest>=8,<9",
-    "pytest-asyncio>=0.25,<1",
+    "pytest-asyncio>=0.26,<1",
     "httpx>=0.28,<1",
+    "testcontainers[postgres]>=4.14,<5",
 ]
 
 [build-system]
@@ -35,16 +38,16 @@ line-length = 88
 
 [tool.ruff.lint]
 select = [
-    "E",    # pycodestyle errors
-    "W",    # pycodestyle warnings
-    "F",    # pyflakes
-    "I",    # isort
-    "N",    # pep8-naming
-    "UP",   # pyupgrade
-    "B",    # flake8-bugbear
-    "SIM",  # flake8-simplify
-    "TCH",  # flake8-type-checking
-    "RUF",  # ruff-specific
+    "E",
+    "W",
+    "F",
+    "I",
+    "N",
+    "UP",
+    "B",
+    "SIM",
+    "TCH",
+    "RUF",
 ]
 
 [tool.ruff.lint.isort]
