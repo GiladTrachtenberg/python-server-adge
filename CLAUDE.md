@@ -33,6 +33,7 @@ Kind (K8s) with ArgoCD. Interview-grade showcase of async job processing.
 | Auth implementation | `src/auth.py`                 | full file |
 | Auth schemas        | `src/auth_schemas.py`         | full file |
 | Key decisions       | `docs/ARCHITECTURE.md`        | full file |
+| Deploy structure    | `docs/ARCHITECTURE.md` D16    | —         |
 | Current state       | `STATE.md`                    | full file |
 | Context protocol    | `docs/CONTEXT-PROTOCOL.md`    | full file |
 
@@ -60,7 +61,8 @@ Kind (K8s) with ArgoCD. Interview-grade showcase of async job processing.
 ## CI/CD
 
 - **CI**: GitHub Actions (lint, type-check, test, build image)
-- **CD**: ArgoCD (GitOps, user-configured, agent does not touch)
+- **CD**: ArgoCD watching `deploy/` on main branch
+- **Deploy layout**: `deploy/{app,infra,argocd,sealed-secrets,kind}/`
 
 ## Git Rule
 

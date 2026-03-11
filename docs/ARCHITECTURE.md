@@ -21,10 +21,18 @@ architecture as an optional Phase 4 addition.
 
 ### D3: ArgoCD for CD (GitOps)
 
-ArgoCD watches the repo and syncs K8s state. User-configured — the agent does
-not manage ArgoCD resources. PreSync hooks handle DB migrations.
+ArgoCD watches `deploy/` on main branch. ApplicationSet with sync waves deploys
+all components in order: CNPG(1) → Redis(2) → MinIO(3) → API(4) → Worker(5).
+PreSync hooks handle DB migrations.
 
 → `demo-architecture.md:517-564`
+
+### D16: `deploy/` Directory Structure
+
+All infrastructure and deployment config lives under `deploy/`, the single path
+ArgoCD tracks. Subdirectories: `app/` (Helm chart), `infra/` (CNPG/Redis/MinIO
+values), `argocd/` (ApplicationSet), `sealed-secrets/`, `kind/` (cluster setup).
+Keeps infra concerns out of the source tree.
 
 ### D4: Presigned URLs for File Downloads
 

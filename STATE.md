@@ -3,7 +3,7 @@
 
 ## Current Phase
 
-**Phase 1: Core Application** — Step 5 of 5
+**Phase 1: Core Application** — Step 5 of 9
 
 ## Phase 1 Progress
 
@@ -13,16 +13,44 @@
 | 2    | Tortoise ORM models + Aerich migrations setup    | DONE        |
 | 3    | Auth (register, login, refresh with rotation)    | DONE        |
 | 4    | Jobs API + Celery worker + MinIO + SSE           | DONE        |
-| 5    | DevOps (Dockerfile, Helm, CI/CD, Kind)           | NOT STARTED |
+| 5    | Rate limiting + Dockerfile + CI                  | NOT STARTED |
+| 6    | Helm chart + Kind cluster + K8s manifests        | NOT STARTED |
+| 7    | ArgoCD + Sealed Secrets setup on Kind            | NOT STARTED |
+| 8    | ApplicationSet + sync waves (full GitOps deploy) | NOT STARTED |
+| 9    | End-to-end validation on Kind                    | NOT STARTED |
 
-## Up Next — Step 5: DevOps
+## Up Next — Step 5: Build & Validate
 
-- Dockerfile (multi-stage, cache mounts)
-- docker-compose.yaml for local dev (API, worker, Redis, Postgres, MinIO)
-- Helm chart for API + worker (with migration Job)
-- Kind cluster setup
-- GitHub Actions CI (lint, type-check, test, build image)
 - Rate limiting via slowapi + Redis backend
+- Dockerfile (multi-stage, cache mounts, non-root user)
+- .dockerignore
+- GitHub Actions CI (lint, type-check, test, build image)
+
+## Step 6: Deploy to Kubernetes
+
+- Helm chart under `deploy/app/` (deployment, service, configmap, sealedsecret, migration job)
+- Kind cluster config + setup script under `deploy/kind/`
+- Infra values: `deploy/infra/{cnpg-cluster,redis,minio}/`
+- K8s namespace manifest
+
+## Step 7: ArgoCD + Sealed Secrets
+
+- ArgoCD installation on Kind
+- Sealed Secrets controller installation
+- SealedSecrets for CNPG, Redis, MinIO, app credentials, ArgoCD admin
+- All secrets under `deploy/sealed-secrets/`
+
+## Step 8: ApplicationSet + Sync Waves
+
+- ApplicationSet under `deploy/argocd/`
+- ArgoCD tracks `deploy/` on main branch
+- Sync waves: CNPG(1) → Redis(2) → MinIO(3) → API(4) → Worker(5)
+
+## Step 9: End-to-End Validation on Kind
+
+- Verify full flow on Kind: register, login, create job, poll, download
+- Validate ArgoCD sync status for all Applications
+- Confirm sealed secrets decrypted correctly
 
 ## Completed
 
