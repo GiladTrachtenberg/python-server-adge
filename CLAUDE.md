@@ -28,6 +28,8 @@ Kind (K8s) with ArgoCD. Interview-grade showcase of async job processing.
 | CI/CD (ArgoCD)      | `docs/demo-architecture.md`   | 517-564   |
 | Project structure   | `docs/demo-architecture.md`   | 568-617   |
 | Implementation plan | `docs/demo-architecture.md`   | 620-649   |
+| DB config           | `src/db.py`                   | full file |
+| ORM models          | `src/models.py`               | full file |
 | Key decisions       | `docs/ARCHITECTURE.md`        | full file |
 | Current state       | `STATE.md`                    | full file |
 | Context protocol    | `docs/CONTEXT-PROTOCOL.md`    | full file |
@@ -49,6 +51,7 @@ Kind (K8s) with ArgoCD. Interview-grade showcase of async job processing.
 - Pydantic models at API boundaries (request/response schemas)
 - Configuration via environment variables (never hardcoded)
 - Async by default — sync only when forced by a library
+- Run uvicorn with `--factory`: `uvicorn src.main:create_app --factory`
 - Immutable data patterns — return new objects, never mutate in place
 - Files: 200-400 lines typical, 800 max
 

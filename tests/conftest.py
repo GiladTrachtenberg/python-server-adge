@@ -1,7 +1,10 @@
 from __future__ import annotations
 
 import atexit
+import os
 from typing import TYPE_CHECKING
+
+os.environ.setdefault("TESTCONTAINERS_RYUK_PORT", "8082")
 
 import pytest
 from httpx import ASGITransport, AsyncClient

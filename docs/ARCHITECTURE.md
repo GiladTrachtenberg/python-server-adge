@@ -90,6 +90,30 @@ separate probes, k8s either kills healthy pods or routes to broken ones.
 
 → `demo-architecture.md:84-103` (endpoint list), `demo-architecture.md:105-119` (status codes)
 
+### D13: Production DB Guard
+
+`model_validator` on `Settings` rejects the local-dev default `database_url` when
+`debug=False`. Prevents accidental use of hardcoded credentials in production.
+The app refuses to start unless `DATABASE_URL` is explicitly set.
+
+→ `src/config.py`
+
+### D14: Lazy `TORTOISE_ORM` Module Attribute
+
+`src.db.TORTOISE_ORM` is resolved via `__getattr__` instead of a module-level
+constant. Avoids triggering `Settings` validation at import time — only evaluated
+when Aerich CLI actually reads it.
+
+→ `src/db.py`
+
+### D15: No Module-Level `app` Object
+
+Removed `app: FastAPI = create_app()` from `src/main.py`. Import-time app creation
+triggered settings validation and Tortoise config in every module that imported
+`src.main`. Use `uvicorn src.main:create_app --factory` instead.
+
+→ `src/main.py`
+
 ### D7: Toolchain Selection
 
 | Tool       | Why                                                        |

@@ -100,4 +100,3 @@ def _register_api_router(app: FastAPI, settings: Settings) -> None:
     app.include_router(router)
 
 
-app: FastAPI = create_app()
