@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+from io import BytesIO
 from typing import TYPE_CHECKING
 from unittest.mock import MagicMock, patch
 from uuid import UUID, uuid4
@@ -135,7 +136,11 @@ class TestJobLifecycle:
             create_resp = await db_client.post(JOBS, headers=headers)
         job_id = create_resp.json()["data"]["id"]
 
-        with patch("src.tasks.asyncio.sleep", return_value=None):
+        with (
+            patch("src.tasks.asyncio.sleep", return_value=None),
+            patch("src.tasks._generate_file", return_value=BytesIO(b"test")),
+            patch("src.tasks.random.randint", return_value=4),
+        ):
             from src.tasks import _process
 
             await _process(job_id, settings)
@@ -150,7 +155,7 @@ class TestJobLifecycle:
 
         job = await Job.get(id=job_id)
         assert job.status == "completed"
-        assert job.minio_object_key == f"jobs/{job_id}/output.txt"
+        assert job.minio_object_key == f"jobs/{job_id}/output.bin"
 
         resp = await db_client.get(f"{JOBS}/{job_id}", headers=headers)
         assert resp.status_code == 200

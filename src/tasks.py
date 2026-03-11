@@ -3,8 +3,9 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import random
-from datetime import UTC, datetime
+from io import BytesIO
 
 import redis.asyncio as aioredis
 from celery import Celery
@@ -13,11 +14,25 @@ from tortoise import Tortoise, connections
 from src.config import Settings
 from src.db import get_tortoise_config
 from src.models import JobStatus
-from src.storage import ensure_bucket, get_minio_client, upload_bytes
+from src.storage import ensure_bucket, get_minio_client, upload_stream
 
 logger: logging.Logger = logging.getLogger(__name__)
 
+_CHUNK_SIZE: int = 1_048_576
+
 celery_app: Celery = Celery("video-demo")
+
+
+def _generate_file(size: int) -> BytesIO:
+    """Generate a BytesIO of random bytes, written in 1MB chunks."""
+    buf = BytesIO()
+    remaining = size
+    while remaining > 0:
+        chunk = min(_CHUNK_SIZE, remaining)
+        buf.write(os.urandom(chunk))
+        remaining -= chunk
+    buf.seek(0)
+    return buf
 
 
 async def _publish(redis_url: str, job_id: str, status: str) -> None:
@@ -43,13 +58,17 @@ async def _process(job_id: str, settings: Settings) -> None:
         await job.save(update_fields=["status", "updated_at"])
         await _publish(settings.redis_url, job_id, "processing")
 
-        await asyncio.sleep(random.uniform(3, 5))
+        await asyncio.sleep(random.uniform(2, 4))
+
+        file_size = random.randint(5_000_000, 50_000_000)
+        data = _generate_file(file_size)
 
         minio = get_minio_client(settings)
         ensure_bucket(minio, settings.minio_bucket)
-        key = f"jobs/{job_id}/output.txt"
-        content = f"Job {job_id} completed at {datetime.now(UTC).isoformat()}"
-        upload_bytes(minio, settings.minio_bucket, key, content.encode())
+        key = f"jobs/{job_id}/output.bin"
+        upload_stream(
+            minio, settings.minio_bucket, key, data, file_size,
+        )
 
         job.status = JobStatus.COMPLETED
         job.minio_object_key = key

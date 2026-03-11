@@ -31,6 +31,20 @@ def upload_bytes(client: Minio, bucket: str, key: str, data: bytes) -> None:
     client.put_object(bucket, key, BytesIO(data), length=len(data))
 
 
+def upload_stream(
+    client: Minio,
+    bucket: str,
+    key: str,
+    stream: BytesIO,
+    length: int,
+    content_type: str = "application/octet-stream",
+) -> None:
+    """Upload a stream to MinIO with known length."""
+    client.put_object(
+        bucket, key, stream, length=length, content_type=content_type,
+    )
+
+
 def presigned_url(
     client: Minio,
     bucket: str,

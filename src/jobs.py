@@ -2,12 +2,13 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, Query, status
+from fastapi import APIRouter, Query, Request, status
 from fastapi.responses import JSONResponse
 
 from src.auth import CurrentUser, SettingsDep
 from src.jobs_schemas import job_to_response, make_pagination_meta
 from src.models import Job, JobStatus
+from src.rate_limit import GET_LIMIT, JOBS_CREATE_LIMIT, get_user_or_ip, limiter
 from src.schemas import ErrorBody, ErrorResponse
 from src.storage import get_minio_client, presigned_url
 from src.tasks import process_job
@@ -31,7 +32,8 @@ async def _get_user_job(job_id: UUID, user_id: UUID) -> Job | JSONResponse:
 
 
 @jobs_router.post("", status_code=status.HTTP_202_ACCEPTED)
-async def create_job(user: CurrentUser) -> JSONResponse:
+@limiter.limit(JOBS_CREATE_LIMIT, key_func=get_user_or_ip)  # type: ignore[union-attr]
+async def create_job(request: Request, user: CurrentUser) -> JSONResponse:
     job = await Job.create(user_id=user.id)
     result = process_job.delay(str(job.id))
     job.celery_task_id = result.id
@@ -45,7 +47,9 @@ async def create_job(user: CurrentUser) -> JSONResponse:
 
 
 @jobs_router.get("")
+@limiter.limit(GET_LIMIT, key_func=get_user_or_ip)  # type: ignore[union-attr]
 async def list_jobs(
+    request: Request,
     user: CurrentUser,
     page: int = Query(1, ge=1),
     per_page: int = Query(20, ge=1, le=100),
@@ -61,7 +65,9 @@ async def list_jobs(
 
 
 @jobs_router.get("/{job_id}")
+@limiter.limit(GET_LIMIT, key_func=get_user_or_ip)  # type: ignore[union-attr]
 async def get_job(
+    request: Request,
     job_id: UUID,
     user: CurrentUser,
     settings: SettingsDep,
@@ -85,7 +91,8 @@ async def get_job(
 
 
 @jobs_router.post("/{job_id}/cancel")
-async def cancel_job(job_id: UUID, user: CurrentUser) -> JSONResponse:
+@limiter.limit(JOBS_CREATE_LIMIT, key_func=get_user_or_ip)  # type: ignore[union-attr]
+async def cancel_job(request: Request, job_id: UUID, user: CurrentUser) -> JSONResponse:
     result = await _get_user_job(job_id, user.id)
     if isinstance(result, JSONResponse):
         return result

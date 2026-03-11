@@ -20,6 +20,7 @@ from src.auth_schemas import (
     UserResponse,
 )
 from src.models import RefreshToken, User
+from src.rate_limit import AUTH_LOGIN_LIMIT, AUTH_REGISTER_LIMIT, limiter
 from src.schemas import ErrorBody, ErrorResponse
 
 if TYPE_CHECKING:
@@ -150,7 +151,8 @@ CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
 @auth_router.post("/register", status_code=status.HTTP_201_CREATED)
-async def register(body: RegisterRequest) -> JSONResponse:
+@limiter.limit(AUTH_REGISTER_LIMIT)  # type: ignore[union-attr]
+async def register(request: Request, body: RegisterRequest) -> JSONResponse:
     hashed = hash_password(body.password)
     try:
         user = await User.create(email=body.email, password_hash=hashed)
@@ -173,7 +175,10 @@ async def register(body: RegisterRequest) -> JSONResponse:
 
 
 @auth_router.post("/login")
-async def login(body: LoginRequest, settings: SettingsDep) -> JSONResponse:
+@limiter.limit(AUTH_LOGIN_LIMIT)  # type: ignore[union-attr]
+async def login(
+    request: Request, body: LoginRequest, settings: SettingsDep,
+) -> JSONResponse:
     user = await User.get_or_none(email=body.email)
     if user is None:
         verify_password(body.password, _DUMMY_HASH)

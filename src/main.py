@@ -7,10 +7,13 @@ from typing import TYPE_CHECKING
 from fastapi import APIRouter, FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from tortoise import Tortoise, connections
 
 from src.config import Settings, get_settings
 from src.db import get_tortoise_config
+from src.rate_limit import init_limiter, rate_limit_exceeded_handler
 from src.schemas import ErrorBody, ErrorDetail, ErrorResponse, HealthResponse
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -49,6 +52,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         lifespan=_lifespan,
     )
     app.state.settings = settings
+
+    rate_limiter = init_limiter(settings)
+    app.state.limiter = rate_limiter
+    app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)  # type: ignore[arg-type]
+    app.add_middleware(SlowAPIMiddleware)
 
     _register_error_handlers(app)
     _register_health_routes(app)

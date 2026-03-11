@@ -34,6 +34,8 @@ class Settings(BaseSettings):
     minio_bucket: str = "video-demo"
     minio_secure: bool = False
 
+    rate_limit_enabled: bool = True
+
     model_config = {"env_prefix": "", "case_sensitive": False}
 
     @model_validator(mode="after")

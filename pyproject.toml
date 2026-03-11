@@ -15,6 +15,7 @@ dependencies = [
     "celery[redis]>=5.4,<6",
     "redis>=4.5.5,<6.5",
     "minio>=7.2,<8",
+    "slowapi>=0.1.9,<1",
 ]
 
 [project.optional-dependencies]
@@ -62,6 +63,8 @@ select = [
 "src/jobs.py" = ["TCH003", "TCH001"]
 "src/sse.py" = ["TCH003", "TCH001"]
 "src/tasks.py" = ["TCH001"]
+"src/rate_limit.py" = ["TCH001", "TCH002"]
+"src/main.py" = ["TCH001", "TCH002"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["src"]
@@ -74,11 +77,11 @@ warn_unused_configs = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["celery.*", "minio.*", "redis.*"]
+module = ["celery.*", "minio.*", "redis.*", "slowapi.*", "limits.*"]
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["src.tasks", "src.sse"]
+module = ["src.tasks", "src.sse", "src.auth", "src.jobs", "src.main"]
 disallow_untyped_calls = false
 disallow_untyped_decorators = false
 

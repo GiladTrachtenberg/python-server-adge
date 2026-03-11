@@ -150,6 +150,7 @@ def settings(
         minio_access_key=minio_config["access_key"],
         minio_secret_key=minio_config["secret_key"],
         minio_bucket="test-bucket",
+        rate_limit_enabled=False,
     )
 
 
@@ -190,6 +191,7 @@ async def db_client(
         minio_access_key=minio_config["access_key"],
         minio_secret_key=minio_config["secret_key"],
         minio_bucket="test-bucket",
+        rate_limit_enabled=False,
     )
     config = get_tortoise_config(database_url)
     await Tortoise.init(config=config)

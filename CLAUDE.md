@@ -32,6 +32,9 @@ Kind (K8s) with ArgoCD. Interview-grade showcase of async job processing.
 | ORM models          | `src/models.py`               | full file |
 | Auth implementation | `src/auth.py`                 | full file |
 | Auth schemas        | `src/auth_schemas.py`         | full file |
+| Rate limiting       | `src/rate_limit.py`           | full file |
+| Frontend plan       | `STATE.md`                    | Steps 9-10|
+| Frontend decisions  | `docs/ARCHITECTURE.md`        | D18, D19  |
 | Key decisions       | `docs/ARCHITECTURE.md`        | full file |
 | Deploy structure    | `docs/ARCHITECTURE.md` D16    | —         |
 | Current state       | `STATE.md`                    | full file |
