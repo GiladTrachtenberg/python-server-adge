@@ -21,20 +21,22 @@ architecture as an optional Phase 4 addition.
 
 ### D3: ArgoCD for CD (GitOps)
 
-ArgoCD watches `deploy/` on main branch. ApplicationSet with sync waves deploys
-all components in order: CNPG(1) → Redis(2) → MinIO(3) → API(4) → Worker(5) →
-Web(6). PreSync hooks handle DB migrations. Cluster-level operators (CNPG,
-Sealed Secrets) and ArgoCD itself are installed by the Kind bootstrap script
-(`deploy/kind/bootstrap.sh`) — they are NOT managed by ArgoCD.
+ArgoCD uses multi-source Applications — chart from `python-server-infra` repo,
+values from this repo (`deploy/app/values-*.yaml`, `deploy/web/values-web.yaml`).
+ApplicationSet with sync waves deploys all components in order: CNPG(1) →
+Redis(2) → MinIO(3) → API(4) → Worker(5) → Web(6). PreSync hooks handle DB
+migrations. Cluster-level operators (CNPG, Sealed Secrets) and ArgoCD itself are
+installed by the Kind bootstrap script — they are NOT managed by ArgoCD.
 
 → `demo-architecture.md:476-514`
 
-### D16: `deploy/` Directory Structure
+### D16: `deploy/` Directory Structure (Two-Repo)
 
-All infrastructure and deployment config lives under `deploy/`, the single path
-ArgoCD tracks. Subdirectories: `app/` (Helm chart), `infra/` (CNPG/Redis/MinIO
-values), `argocd/` (ApplicationSet), `sealed-secrets/`, `kind/` (cluster setup).
-Keeps infra concerns out of the source tree.
+Split across two repos. **This repo** (`python-server-adge`): `deploy/app/values-api.yaml`,
+`values-worker.yaml`, `deploy/web/values-web.yaml` — app-specific values only.
+**Infra repo** (`python-server-infra`): `deploy/app/` (shared Helm chart + defaults),
+`deploy/infra/` (CNPG/Redis/MinIO), `deploy/kind/` (cluster setup),
+`deploy/argocd/`, `deploy/sealed-secrets/`.
 
 ### D4: Presigned URLs for File Downloads
 
@@ -188,6 +190,36 @@ Docker Compose and K8s without maintaining two configs. Port 80 inside the conta
 deploy time (git SHA from CI) to ensure ArgoCD detects drift.
 
 → `web/Dockerfile`, `web/nginx.conf.template`, `deploy/web/values-web.yaml`
+
+### D24: Kind NodePort Pattern (No Ingress Controller)
+
+Kind cluster maps `extraPortMappings` from host ports (8082/9443) to NodePort
+range (30080/30443). Services use `type: NodePort` to expose directly — no nginx
+ingress controller needed. Simplest networking pattern for a local demo. Port 8080
+is reserved (user's client occupies it).
+
+→ `python-server-infra/deploy/kind/kind-config.yaml`, `bootstrap.sh`
+
+### D25: Wrapper Charts for Infrastructure Dependencies
+
+Redis and MinIO are deployed as small "wrapper" Helm charts that declare the
+upstream chart (bitnami/redis, minio/minio) as a dependency. This lets ArgoCD
+manage them as Helm releases with pinned versions and custom values, without
+vendoring the upstream charts. `helm dependency build` resolves them.
+
+→ `python-server-infra/deploy/infra/redis/Chart.yaml`, `minio/Chart.yaml`
+
+### D26: Two-Repo Split (App + Infra)
+
+Helm chart, Kind config, bootstrap scripts, and infrastructure manifests live in
+a separate `python-server-infra` repo. This repo keeps only app-specific values
+files (`deploy/app/values-api.yaml`, `values-worker.yaml`, `deploy/web/values-web.yaml`).
+ArgoCD uses multi-source Applications — chart from infra repo, values from app repo.
+CI in this repo builds images, pushes to GHCR, and updates `image.tag` in the
+values files (same-repo commit). Clean separation: app developers change values,
+infra changes go through the infra repo.
+
+→ `python-server-infra/deploy/`, `deploy/app/values-*.yaml`
 
 ### D7: Toolchain Selection
 

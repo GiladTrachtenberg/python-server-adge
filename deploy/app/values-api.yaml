@@ -1,0 +1,34 @@
+component: api
+replicas: 2
+
+image:
+  repository: video-demo
+  tag: ""
+
+migrations:
+  enabled: true
+
+health:
+  liveness: /healthz
+  readiness: /readyz
+  port: 8000
+
+service:
+  enabled: true
+  type: ClusterIP
+  port: 8000
+  targetPort: 8000
+
+configMap:
+  enabled: true
+  data:
+    APP_NAME: video-demo
+    DEBUG: "false"
+    API_V1_PREFIX: /api/v1
+    MINIO_BUCKET: video-demo
+    MINIO_SECURE: "false"
+    RATE_LIMIT_ENABLED: "true"
+
+sealedSecret:
+  enabled: true
+  encryptedData: {}

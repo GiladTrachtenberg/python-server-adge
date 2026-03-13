@@ -1,0 +1,28 @@
+component: worker
+replicas: 2
+
+image:
+  repository: video-demo
+  tag: ""
+
+migrations:
+  enabled: false
+
+commandOverride:
+  command: ["celery"]
+  args: ["-A", "src.tasks", "worker", "--loglevel=info", "--concurrency=2"]
+
+service:
+  enabled: false
+
+configMap:
+  enabled: true
+  data:
+    APP_NAME: video-demo
+    DEBUG: "false"
+    MINIO_BUCKET: video-demo
+    MINIO_SECURE: "false"
+
+sealedSecret:
+  enabled: true
+  encryptedData: {}

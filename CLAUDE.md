@@ -47,6 +47,9 @@ Kind (K8s) with ArgoCD. Interview-grade showcase of async job processing.
 | Frontend decisions  | `docs/ARCHITECTURE.md`        | D18-D23   |
 | Key decisions       | `docs/ARCHITECTURE.md`        | full file |
 | Deploy structure    | `docs/ARCHITECTURE.md` D16    | —         |
+| Helm API values     | `deploy/app/values-api.yaml`  | full file |
+| Helm Worker values  | `deploy/app/values-worker.yaml`| full file |
+| Infra repo          | `../python-server-infra/`     | separate repo |
 | Current state       | `STATE.md`                    | full file |
 | Context protocol    | `docs/CONTEXT-PROTOCOL.md`    | full file |
 
@@ -73,9 +76,12 @@ Kind (K8s) with ArgoCD. Interview-grade showcase of async job processing.
 
 ## CI/CD
 
-- **CI**: GitHub Actions (lint, type-check, test, build image)
-- **CD**: ArgoCD watching `deploy/` on main branch
-- **Deploy layout**: `deploy/{app,infra,argocd,sealed-secrets,kind}/`
+- **CI**: Two path-filtered workflows — `ci-backend.yml` (src/, tests/, Dockerfile) and `ci-frontend.yml` (web/)
+- **Images**: Push to GHCR (`ghcr.io/<owner>/video-demo`, `video-demo-web`), tag = git SHA
+- **Tag update**: CI updates `image.tag` in values files and commits to same branch (Option A)
+- **CD**: ArgoCD multi-source — chart from `python-server-infra`, values from this repo
+- **Infra repo**: `python-server-infra` holds Helm chart, Kind config, infra manifests
+- **This repo**: `deploy/app/values-*.yaml` + `deploy/web/values-web.yaml` (app-specific values only)
 
 ## Git Rule
 
