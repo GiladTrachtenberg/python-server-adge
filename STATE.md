@@ -15,18 +15,18 @@
 | 4    | Jobs API + Celery worker + MinIO + SSE           | DONE        |
 | 5    | Rate limiting + Dockerfile + CI                  | DONE        |
 | 6    | React frontend (auth, jobs, SSE, download)       | DONE        |
-| 7    | Frontend Dockerfile + CI + Helm values           | NOT STARTED |
+| 7    | Frontend Dockerfile + CI + Helm values           | DONE        |
 | 8    | Helm chart + Kind cluster + K8s manifests        | NOT STARTED |
 | 9    | ArgoCD + Sealed Secrets setup on Kind            | NOT STARTED |
 | 10   | ApplicationSet + sync waves (full GitOps deploy) | NOT STARTED |
 | 11   | End-to-end validation on Kind (full stack)       | NOT STARTED |
 
-## Up Next — Step 7: Frontend Infra
+## Up Next — Step 8: Helm Chart + Kind Cluster
 
-- Multi-stage Dockerfile: node:22-alpine → nginx:alpine
-- nginx.conf: SPA routing + /api proxy (SSE buffering off)
-- CI: add frontend-lint + frontend-build-image jobs
-- Helm values-web.yaml for frontend deployment
+- Shared Helm chart under `deploy/app/`
+- Kind cluster config (`deploy/kind/`)
+- K8s manifests for CNPG, Redis, MinIO (`deploy/infra/`)
+- Bootstrap script for cluster setup
 
 ## Step 10: ApplicationSet + Sync Waves
 
@@ -44,6 +44,7 @@
 - **Step 4**: Jobs CRUD, Celery task (generates 5-50MB files), MinIO, SSE
 - **Step 5**: Rate limiting (slowapi), Dockerfile, .dockerignore, GitHub Actions CI
 - **Step 6**: React SPA (`web/`), scoped SSE query-param auth, Tortoise 1.1.x global fallback fix
+- **Step 7**: Frontend Dockerfile (multi-stage nginx), nginx.conf.template (envsubst + SSE proxy), CI jobs, `deploy/web/values-web.yaml`
 
 ## Blocked
 

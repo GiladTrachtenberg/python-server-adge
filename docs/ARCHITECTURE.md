@@ -177,6 +177,18 @@ validation (D13) would reject imports in non-debug environments.
 
 → `src/tasks.py:23-26`
 
+### D23: Frontend Container (nginx + envsubst)
+
+Multi-stage Dockerfile: `node:22-alpine` builds the Vite SPA, `nginx:alpine` serves
+it. nginx proxies `/api/` to the backend with SSE buffering disabled (`proxy_buffering
+off`, `proxy_cache off`, `X-Accel-Buffering no`). The upstream address is templated
+via `envsubst` at container start (`API_UPSTREAM` env var) — works for both local
+Docker Compose and K8s without maintaining two configs. Port 80 inside the container
+(not 8080). Image tag is intentionally empty in `values-web.yaml` — must be set at
+deploy time (git SHA from CI) to ensure ArgoCD detects drift.
+
+→ `web/Dockerfile`, `web/nginx.conf.template`, `deploy/web/values-web.yaml`
+
 ### D7: Toolchain Selection
 
 | Tool       | Why                                                        |

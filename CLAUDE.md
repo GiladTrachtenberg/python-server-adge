@@ -40,8 +40,11 @@ Kind (K8s) with ArgoCD. Interview-grade showcase of async job processing.
 | Vite config + proxy | `web/vite.config.ts`          | full file |
 | SSE auth (scoped)   | `src/auth.py`                 | `CurrentUserSSE` |
 | Tortoise fallback   | `src/main.py`                 | line 29   |
-| Frontend plan       | `STATE.md`                    | Steps 9-10|
-| Frontend decisions  | `docs/ARCHITECTURE.md`        | D18-D21   |
+| Frontend plan       | `STATE.md`                    | Steps 10-11|
+| Frontend Dockerfile | `web/Dockerfile`              | full file |
+| nginx proxy config  | `web/nginx.conf.template`     | full file |
+| Frontend Helm vals  | `deploy/web/values-web.yaml`  | full file |
+| Frontend decisions  | `docs/ARCHITECTURE.md`        | D18-D23   |
 | Key decisions       | `docs/ARCHITECTURE.md`        | full file |
 | Deploy structure    | `docs/ARCHITECTURE.md` D16    | —         |
 | Current state       | `STATE.md`                    | full file |
