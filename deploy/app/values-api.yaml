@@ -3,8 +3,6 @@ replicas: 2
 image:
   repository: ghcr.io/giladtrachtenberg/video-demo
   tag: "660629507afe800a3ead820f341a22f8d92a586a"
-imagePullSecrets:
-  - name: ghcr-pull-secret
 migrations:
   enabled: true
 health:
