@@ -285,6 +285,49 @@ passing it to `docker/build-push-action`. Values files also use lowercase
 
 → `.github/workflows/ci-backend.yml`, `ci-frontend.yml`, `deploy/app/values-*.yaml`
 
+### D34: Direct Helm Repo Sources (Remove Wrapper Charts)
+
+Redis and MinIO wrapper charts (`deploy/infra/redis/`, `deploy/infra/minio/`)
+replaced with direct Helm repo sources in the ApplicationSet. ArgoCD resolves
+chart versions at sync time — no `Chart.lock` or tarballs to commit. Values
+specified inline via `valuesObject` in the ApplicationSet generator.
+
+Wrapper charts only make sense when adding custom templates alongside upstream
+charts. We only pass values, so direct sources are simpler. CNPG cluster stays
+as a path-based source since it's a raw CRD manifest, not a Helm chart.
+
+→ Infra: `deploy/argocd/applicationset.yaml` (redis/minio sources updated)
+
+### D33: Kyverno Security Policies
+
+**Why Kyverno over OPA/Gatekeeper**: native Kubernetes resource syntax
+(ClusterPolicy CRD), no Rego language to learn, lower operational overhead.
+
+**Install strategy**: Kyverno controller installed via Helm in `bootstrap.sh`
+(same pattern as CNPG, Sealed Secrets, ArgoCD). Policies managed via ArgoCD
+as a new ApplicationSet element deployed at wave 0 (before workloads).
+
+**Scope**: `demo` namespace only. System namespaces (`argocd`, `kyverno`,
+`kube-system`, `cnpg-system`) are excluded — no need to allow-list operator
+or system images.
+
+**Policies**:
+
+1. *Image allow-list* — `validate` policy, `Enforce` mode. Permits only:
+
+| Image pattern | Used by |
+|---------------|---------|
+| `ghcr.io/giladtrachtenberg/*` | api, worker, web, migration |
+| `docker.io/bitnami/redis*` | redis-master |
+| `docker.io/minio/*` | minio, minio post-job (mc) |
+| `ghcr.io/cloudnative-pg/*` | demo-pg |
+| `docker.io/library/busybox*` | init containers |
+
+2. *Disallow latest tag* — `validate` policy, `Enforce` mode. Rejects
+   `image:latest` or untagged images in `demo` namespace.
+
+→ Infra: `deploy/kyverno/` (policies), `deploy/kind/bootstrap.sh` (install)
+
 ### D7: Toolchain Selection
 
 | Tool       | Why                                                        |
