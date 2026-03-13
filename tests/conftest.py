@@ -139,7 +139,9 @@ def minio_config() -> dict[str, Any]:
 
 @pytest.fixture
 def settings(
-    database_url: str, redis_url: str, minio_config: dict[str, Any],
+    database_url: str,
+    redis_url: str,
+    minio_config: dict[str, Any],
 ) -> Settings:
     return Settings(
         debug=True,
@@ -179,7 +181,9 @@ async def db(database_url: str) -> AsyncGenerator[None]:
 
 @pytest.fixture
 async def db_client(
-    database_url: str, redis_url: str, minio_config: dict[str, Any],
+    database_url: str,
+    redis_url: str,
+    minio_config: dict[str, Any],
 ) -> AsyncGenerator[AsyncClient]:
     """AsyncClient backed by real Postgres + Redis + MinIO."""
     settings = Settings(

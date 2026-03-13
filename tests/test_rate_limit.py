@@ -18,7 +18,9 @@ AUTH = "/api/v1/auth"
 
 @pytest.fixture
 async def rl_client(
-    database_url: str, redis_url: str, minio_config: dict[str, Any],
+    database_url: str,
+    redis_url: str,
+    minio_config: dict[str, Any],
 ) -> AsyncGenerator[AsyncClient]:
     settings = Settings(
         debug=True,

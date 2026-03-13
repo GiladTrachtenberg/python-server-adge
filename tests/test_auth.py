@@ -13,13 +13,27 @@ pytestmark = pytest.mark.usefixtures("db")
 AUTH = "/api/v1/auth"
 
 
-async def _register(client: AsyncClient, email: str = "u@test.com", password: str = "strongpass1") -> dict:
-    resp = await client.post(f"{AUTH}/register", json={"email": email, "password": password})
+async def _register(
+    client: AsyncClient,
+    email: str = "u@test.com",
+    password: str = "strongpass1",
+) -> dict:
+    resp = await client.post(
+        f"{AUTH}/register",
+        json={"email": email, "password": password},
+    )
     return {"response": resp, "data": resp.json()}
 
 
-async def _login(client: AsyncClient, email: str = "u@test.com", password: str = "strongpass1") -> dict:
-    resp = await client.post(f"{AUTH}/login", json={"email": email, "password": password})
+async def _login(
+    client: AsyncClient,
+    email: str = "u@test.com",
+    password: str = "strongpass1",
+) -> dict:
+    resp = await client.post(
+        f"{AUTH}/login",
+        json={"email": email, "password": password},
+    )
     return {"response": resp, "data": resp.json()}
 
 
@@ -88,7 +102,10 @@ class TestRefresh:
         assert "refresh_token" in data
         assert data["refresh_token"] != refresh_token
 
-    async def test_old_token_rejected_after_rotation(self, db_client: AsyncClient) -> None:
+    async def test_old_token_rejected_after_rotation(
+        self,
+        db_client: AsyncClient,
+    ) -> None:
         await _register(db_client)
         login = await _login(db_client)
         old_token = login["data"]["data"]["refresh_token"]
@@ -115,7 +132,10 @@ class TestRefresh:
         result = await _refresh(db_client, "garbage-token")
         assert result["response"].status_code == 401
 
-    async def test_access_token_works_on_protected_route(self, db_client: AsyncClient) -> None:
+    async def test_access_token_works_on_protected_route(
+        self,
+        db_client: AsyncClient,
+    ) -> None:
         await _register(db_client)
         login = await _login(db_client)
         access_token = login["data"]["data"]["access_token"]
@@ -147,7 +167,8 @@ class TestRefresh:
 
 class TestQueryParamAuth:
     async def test_query_param_rejected_on_normal_endpoints(
-        self, db_client: AsyncClient,
+        self,
+        db_client: AsyncClient,
     ) -> None:
         await _register(db_client)
         login = await _login(db_client)

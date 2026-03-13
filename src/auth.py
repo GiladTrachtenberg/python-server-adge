@@ -198,7 +198,9 @@ async def register(request: Request, body: RegisterRequest) -> JSONResponse:
 @auth_router.post("/login")
 @limiter.limit(AUTH_LOGIN_LIMIT)  # type: ignore[union-attr]
 async def login(
-    request: Request, body: LoginRequest, settings: SettingsDep,
+    request: Request,
+    body: LoginRequest,
+    settings: SettingsDep,
 ) -> JSONResponse:
     user = await User.get_or_none(email=body.email)
     if user is None:

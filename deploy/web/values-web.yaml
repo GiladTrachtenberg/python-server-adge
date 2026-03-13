@@ -14,8 +14,11 @@ health:
   port: 80
 
 service:
+  enabled: true
+  type: NodePort
   port: 80
   targetPort: 80
+  nodePort: 30080
 
 env:
   API_UPSTREAM: video-demo-api:8000

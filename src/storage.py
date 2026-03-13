@@ -41,7 +41,11 @@ def upload_stream(
 ) -> None:
     """Upload a stream to MinIO with known length."""
     client.put_object(
-        bucket, key, stream, length=length, content_type=content_type,
+        bucket,
+        key,
+        stream,
+        length=length,
+        content_type=content_type,
     )
 
 

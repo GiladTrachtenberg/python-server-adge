@@ -70,7 +70,11 @@ async def _process(job_id: str, settings: Settings) -> None:
         ensure_bucket(minio, settings.minio_bucket)
         key = f"jobs/{job_id}/output.bin"
         upload_stream(
-            minio, settings.minio_bucket, key, data, file_size,
+            minio,
+            settings.minio_bucket,
+            key,
+            data,
+            file_size,
         )
 
         job.status = JobStatus.COMPLETED

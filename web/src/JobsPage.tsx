@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   type JobData,
   type PaginationMeta,
@@ -41,6 +41,25 @@ export function JobsPage({ token, onSelectJob, onLogout }: Props) {
   useEffect(() => {
     void load(1);
   }, [load]);
+
+  const hasActiveJobs = jobs.some(
+    (j) => j.status === "pending" || j.status === "processing",
+  );
+
+  const pollCount = useRef(0);
+
+  useEffect(() => {
+    if (!hasActiveJobs) {
+      pollCount.current = 0;
+      return;
+    }
+    const delay = Math.min(5000 * Math.pow(2, pollCount.current), 60000);
+    const id = setTimeout(() => {
+      pollCount.current += 1;
+      void load(page);
+    }, delay);
+    return () => clearTimeout(id);
+  }, [hasActiveJobs, load, page, jobs]);
 
   async function handleCreate() {
     setCreating(true);

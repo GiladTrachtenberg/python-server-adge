@@ -3,7 +3,7 @@
 
 ## Current Phase
 
-**Phase 3: Kubernetes** — Step 10 of 11
+**Phase 3: Kubernetes** — Step 11 of 12
 
 ## Progress
 
@@ -19,10 +19,17 @@
 | 8    | Helm chart + Kind cluster + K8s manifests        | DONE        |
 | 9    | ArgoCD + Sealed Secrets setup on Kind            | DONE        |
 | 10   | ApplicationSet + sync waves (full GitOps deploy) | DONE        |
-| 11   | End-to-end validation on Kind (full stack)       | NOT STARTED |
+| 11   | Fix CI backend workflow (dev deps + errors)      | IN PROGRESS |
+| 12   | End-to-end validation on Kind (full stack)       | NOT STARTED |
 
-## Up Next — Step 11: End-to-End Validation on Kind
+## Up Next — Step 11: Fix CI Backend Workflow
 
+- Fix `uv sync --frozen` missing `--extra dev` (ruff, mypy, pytest not installed)
+- Verify all CI jobs pass: lint, type-check, test, build-and-push
+
+## Step 12: End-to-End Validation on Kind
+
+- Run bootstrap.sh on Kind cluster
 - Full flow via frontend: register, login, create job, watch SSE, download
 - Validate ArgoCD sync status for all Applications
 
