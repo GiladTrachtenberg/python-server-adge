@@ -2,7 +2,7 @@ component: web
 replicas: 1
 image:
   repository: ghcr.io/giladtrachtenberg/video-demo-web
-  tag: "88b77d574d4ef98fb9e9959022fb9fd31c36d69f"
+  tag: "b3ad4dd8236a9839b4793e353044be29efb5fa06"
 migrations:
   enabled: false
 health:
