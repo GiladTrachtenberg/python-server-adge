@@ -99,8 +99,8 @@ docker compose up -d
 uv sync --frozen --extra dev
 
 # Start dependencies
-docker run -d --name pg -e POSTGRES_USER=demo -e POSTGRES_PASSWORD=demo -e POSTGRES_DB=video_demo -p 5434:5432 postgres:16-alpine
-docker run -d --name redis -p 6380:6379 redis:7-alpine
+docker run -d --name pg -e POSTGRES_USER=demo -e POSTGRES_PASSWORD=demo -e POSTGRES_DB=video_demo -p 5434:5432 postgres:18-alpine
+docker run -d --name redis -p 6380:6379 redis:8-alpine
 docker run -d --name minio -p 9000:9000 -p 9001:9001 minio/minio server /data --console-address :9001
 
 # Run migrations
