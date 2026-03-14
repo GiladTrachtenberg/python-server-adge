@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { type JobData, cancelJob, getJob, sseUrl } from "./api";
+import { useEffect, useState } from "react";
+import { type JobData, cancelJob, getJob } from "./api";
+import { useJobEvent } from "./SseContext";
 
 interface Props {
   token: string;
@@ -8,66 +9,48 @@ interface Props {
   onLogout: () => void;
 }
 
-const TERMINAL = new Set(["completed", "failed", "cancelled"]);
-
 export function JobDetailPage({ token, jobId, onBack, onLogout }: Props) {
   const [job, setJob] = useState<JobData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
-  const esRef = useRef<EventSource | null>(null);
+
+  const sseEvent = useJobEvent(jobId);
 
   useEffect(() => {
     let cancelled = false;
-
     async function init() {
       try {
         const data = await getJob(token, jobId);
-        if (cancelled) return;
-        setJob(data);
-
-        if (TERMINAL.has(data.status)) return;
-
-        const es = new EventSource(sseUrl(jobId, token));
-        esRef.current = es;
-
-        es.addEventListener("status", (e: MessageEvent<string>) => {
-          const parsed = JSON.parse(e.data) as { status: string };
-          setJob((prev) =>
-            prev ? { ...prev, status: parsed.status } : prev,
-          );
-
-          if (TERMINAL.has(parsed.status)) {
-            es.close();
-            void refetch();
-          }
-        });
-
-        es.onerror = () => {
-          es.close();
-        };
+        if (!cancelled) setJob(data);
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : "Failed to load job");
         }
       }
     }
-
-    async function refetch() {
-      try {
-        const data = await getJob(token, jobId);
-        if (!cancelled) setJob(data);
-      } catch {
-        /* best effort */
-      }
-    }
-
     void init();
-
     return () => {
       cancelled = true;
-      esRef.current?.close();
     };
   }, [token, jobId]);
+
+  useEffect(() => {
+    if (!sseEvent || !job) return;
+    if (sseEvent.status === job.status) return;
+
+    setJob((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        status: sseEvent.status,
+        download_url: sseEvent.download_url ?? prev.download_url,
+      };
+    });
+
+    if (sseEvent.status === "failed") {
+      void getJob(token, jobId).then((data) => setJob(data)).catch(() => {});
+    }
+  }, [sseEvent, job, token, jobId]);
 
   async function handleCancel() {
     setCancelling(true);
@@ -75,7 +58,6 @@ export function JobDetailPage({ token, jobId, onBack, onLogout }: Props) {
     try {
       const updated = await cancelJob(token, jobId);
       setJob(updated);
-      esRef.current?.close();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Cancel failed");
     } finally {

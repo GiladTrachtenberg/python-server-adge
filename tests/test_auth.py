@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
 import pytest
@@ -17,7 +17,7 @@ async def _register(
     client: AsyncClient,
     email: str = "u@test.com",
     password: str = "strongpass1",
-) -> dict:
+) -> dict[str, Any]:
     resp = await client.post(
         f"{AUTH}/register",
         json={"email": email, "password": password},
@@ -29,7 +29,7 @@ async def _login(
     client: AsyncClient,
     email: str = "u@test.com",
     password: str = "strongpass1",
-) -> dict:
+) -> dict[str, Any]:
     resp = await client.post(
         f"{AUTH}/login",
         json={"email": email, "password": password},
@@ -37,7 +37,7 @@ async def _login(
     return {"response": resp, "data": resp.json()}
 
 
-async def _refresh(client: AsyncClient, refresh_token: str) -> dict:
+async def _refresh(client: AsyncClient, refresh_token: str) -> dict[str, Any]:
     resp = await client.post(f"{AUTH}/refresh", json={"refresh_token": refresh_token})
     return {"response": resp, "data": resp.json()}
 

@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   type JobData,
   type PaginationMeta,
   createJob,
   listJobs,
 } from "./api";
+import { useJobEvents } from "./SseContext";
 
 interface Props {
   token: string;
@@ -19,6 +20,8 @@ export function JobsPage({ token, onSelectJob, onLogout }: Props) {
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const sseEvents = useJobEvents();
 
   const load = useCallback(
     async (p: number) => {
@@ -42,24 +45,20 @@ export function JobsPage({ token, onSelectJob, onLogout }: Props) {
     void load(1);
   }, [load]);
 
-  const hasActiveJobs = jobs.some(
-    (j) => j.status === "pending" || j.status === "processing",
-  );
-
-  const pollCount = useRef(0);
-
   useEffect(() => {
-    if (!hasActiveJobs) {
-      pollCount.current = 0;
-      return;
-    }
-    const delay = Math.min(5000 * Math.pow(2, pollCount.current), 60000);
-    const id = setTimeout(() => {
-      pollCount.current += 1;
-      void load(page);
-    }, delay);
-    return () => clearTimeout(id);
-  }, [hasActiveJobs, load, page, jobs]);
+    if (sseEvents.size === 0) return;
+    setJobs((prev) =>
+      prev.map((job) => {
+        const evt = sseEvents.get(job.id);
+        if (!evt || evt.status === job.status) return job;
+        return {
+          ...job,
+          status: evt.status,
+          download_url: evt.download_url,
+        };
+      }),
+    );
+  }, [sseEvents]);
 
   async function handleCreate() {
     setCreating(true);

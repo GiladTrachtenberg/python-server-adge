@@ -35,7 +35,7 @@ async def _get_user_job(job_id: UUID, user_id: UUID) -> Job | JSONResponse:
 @limiter.limit(JOBS_CREATE_LIMIT, key_func=get_user_or_ip)  # type: ignore[union-attr]
 async def create_job(request: Request, user: CurrentUser) -> JSONResponse:
     job = await Job.create(user_id=user.id)
-    result = process_job.delay(str(job.id))
+    result = process_job.delay(str(job.id), str(user.id))
     job.celery_task_id = result.id
     await job.save(update_fields=["celery_task_id"])
 

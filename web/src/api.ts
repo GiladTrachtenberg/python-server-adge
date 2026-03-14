@@ -152,8 +152,8 @@ export async function cancelJob(
   });
 }
 
-export function sseUrl(jobId: string, token: string): string {
-  return `${BASE}/jobs/${jobId}/events?token=${token}`;
+export function userSseUrl(token: string): string {
+  return `${BASE}/jobs/events?token=${token}`;
 }
 
 export { ApiRequestError };

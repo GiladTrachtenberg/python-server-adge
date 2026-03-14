@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AuthPage } from "./AuthPage";
 import { JobDetailPage } from "./JobDetailPage";
 import { JobsPage } from "./JobsPage";
+import { SseProvider } from "./SseContext";
 
 type View = "auth" | "jobs" | "detail";
 
@@ -52,20 +53,24 @@ export function App() {
 
   if (view === "detail" && selectedJobId) {
     return (
-      <JobDetailPage
-        token={token}
-        jobId={selectedJobId}
-        onBack={handleBack}
-        onLogout={handleLogout}
-      />
+      <SseProvider token={token}>
+        <JobDetailPage
+          token={token}
+          jobId={selectedJobId}
+          onBack={handleBack}
+          onLogout={handleLogout}
+        />
+      </SseProvider>
     );
   }
 
   return (
-    <JobsPage
-      token={token}
-      onSelectJob={handleSelectJob}
-      onLogout={handleLogout}
-    />
+    <SseProvider token={token}>
+      <JobsPage
+        token={token}
+        onSelectJob={handleSelectJob}
+        onLogout={handleLogout}
+      />
+    </SseProvider>
   );
 }

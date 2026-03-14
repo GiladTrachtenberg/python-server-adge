@@ -35,9 +35,11 @@ Kind (K8s) with ArgoCD. Interview-grade showcase of async job processing.
 | Auth implementation | `src/auth.py`                 | full file |
 | Auth schemas        | `src/auth_schemas.py`         | full file |
 | Rate limiting       | `src/rate_limit.py`           | full file |
-| Frontend source     | `web/src/`                    | 8 files   |
+| Frontend source     | `web/src/`                    | 9 files   |
 | Frontend API client | `web/src/api.ts`              | full file |
+| SSE context         | `web/src/SseContext.tsx`       | full file |
 | Vite config + proxy | `web/vite.config.ts`          | full file |
+| SSE endpoint        | `src/sse.py`                  | full file |
 | SSE auth (scoped)   | `src/auth.py`                 | `CurrentUserSSE` |
 | Tortoise fallback   | `src/main.py`                 | line 29   |
 | Frontend plan       | `STATE.md`                    | Steps 10-11|
@@ -63,6 +65,7 @@ Kind (K8s) with ArgoCD. Interview-grade showcase of async job processing.
 | Progressive sync    | `docs/ARCHITECTURE.md` D30                     | —         |
 | Direct Helm sources | `docs/ARCHITECTURE.md` D34                     | —         |
 | User-scoped SSE     | `docs/ARCHITECTURE.md` D35                     | —         |
+| Docker Compose      | `docker-compose.yml`                           | full file |
 
 ## Code Standards
 

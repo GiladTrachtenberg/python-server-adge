@@ -146,6 +146,6 @@ def _register_api_router(app: FastAPI, settings: Settings) -> None:
     from src.sse import sse_router
 
     router.include_router(auth_router)
-    router.include_router(jobs_router)
     router.include_router(sse_router)
+    router.include_router(jobs_router)
     app.include_router(router)

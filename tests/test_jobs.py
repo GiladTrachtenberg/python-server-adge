@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 from io import BytesIO
 from typing import TYPE_CHECKING
@@ -20,13 +21,20 @@ if TYPE_CHECKING:
 pytestmark = pytest.mark.usefixtures("db")
 
 JOBS = "/api/v1/jobs"
+AUTH = "/api/v1/auth"
 
 
-def _mock_delay(job_id: str) -> MagicMock:
+def _mock_delay(job_id: str, user_id: str) -> MagicMock:
     """Return a fake AsyncResult with an id attribute."""
     result = MagicMock()
     result.id = f"celery-{job_id}"
     return result
+
+
+async def _get_user_id(client: AsyncClient, headers: dict[str, str]) -> str:
+    """Fetch the authenticated user's ID via /auth/me."""
+    resp = await client.get(f"{AUTH}/me", headers=headers)
+    return str(resp.json()["data"]["id"])
 
 
 class TestCreateJob:
@@ -116,7 +124,7 @@ class TestCancelJob:
         from src.models import Job
 
         job = await Job.get(id=job_id)
-        job.status = "completed"
+        job.status = "completed"  # type: ignore[assignment]
         await job.save(update_fields=["status"])
 
         resp = await db_client.post(f"{JOBS}/{job_id}/cancel", headers=headers)
@@ -130,8 +138,9 @@ class TestJobLifecycle:
         db_client: AsyncClient,
         settings: Settings,
     ) -> None:
-        """Full pipeline: create → task runs → completed + presigned URL."""
+        """Full pipeline: create -> task runs -> completed + presigned URL."""
         headers = await register_and_login(db_client)
+        user_id = await _get_user_id(db_client, headers)
         with patch("src.jobs.process_job.delay", side_effect=_mock_delay):
             create_resp = await db_client.post(JOBS, headers=headers)
         job_id = create_resp.json()["data"]["id"]
@@ -143,7 +152,7 @@ class TestJobLifecycle:
         ):
             from src.tasks import _process
 
-            await _process(job_id, settings)
+            await _process(job_id, user_id, settings)
 
         from tortoise import Tortoise
 
@@ -168,38 +177,70 @@ class TestJobLifecycle:
 class TestSSE:
     async def test_receives_published_event(
         self,
-        db_client: AsyncClient,
         settings: Settings,
     ) -> None:
-        """Open SSE stream, publish to Redis, verify event arrives."""
-        headers = await register_and_login(db_client)
-        with patch("src.jobs.process_job.delay", side_effect=_mock_delay):
-            create_resp = await db_client.post(JOBS, headers=headers)
-        job_id = create_resp.json()["data"]["id"]
+        """Directly test _stream_events generator with real Redis."""
+        from src.sse import _stream_events
 
-        collected_lines: list[str] = []
+        user_id = str(uuid4())
+        job_id = str(uuid4())
 
-        async def read_stream() -> None:
-            async with db_client.stream(
-                "GET",
-                f"{JOBS}/{job_id}/events",
-                headers=headers,
-            ) as resp:
-                async for line in resp.aiter_lines():
-                    collected_lines.append(line)
-                    if '"completed"' in line:
-                        break
+        collected: list[str] = []
 
-        stream_task = asyncio.create_task(read_stream())
+        async def consume() -> None:
+            async for chunk in _stream_events(settings.redis_url, user_id):
+                collected.append(chunk)
+                if '"completed"' in chunk:
+                    break
+
+        task = asyncio.create_task(consume())
         await asyncio.sleep(0.3)
 
-        r = aioredis.from_url(settings.redis_url)
-        payload = json.dumps({"job_id": job_id, "status": "completed"})
-        await r.publish(f"jobs:{job_id}:status", payload)
+        r = aioredis.from_url(settings.redis_url)  # type: ignore[no-untyped-call]
+        payload = json.dumps(
+            {"job_id": job_id, "status": "completed", "download_url": None},
+        )
+        await r.publish(f"jobs:user:{user_id}", payload)
         await r.aclose()
 
-        await asyncio.wait_for(stream_task, timeout=5.0)
+        await asyncio.wait_for(task, timeout=5.0)
 
-        full_output = "\n".join(collected_lines)
-        assert "event: connected" in full_output
-        assert '"completed"' in full_output
+        full = "".join(collected)
+        assert "event: connected" in full
+        assert '"completed"' in full
+        assert job_id in full
+
+    async def test_does_not_receive_other_users_events(
+        self,
+        settings: Settings,
+    ) -> None:
+        """Events on user B's channel must not reach user A's stream."""
+        from src.sse import _stream_events
+
+        user_a = str(uuid4())
+        user_b = str(uuid4())
+
+        collected: list[str] = []
+
+        async def consume() -> None:
+            async for chunk in _stream_events(settings.redis_url, user_a):
+                collected.append(chunk)
+
+        task = asyncio.create_task(consume())
+        await asyncio.sleep(0.3)
+
+        r = aioredis.from_url(settings.redis_url)  # type: ignore[no-untyped-call]
+        payload = json.dumps(
+            {"job_id": str(uuid4()), "status": "completed", "download_url": None},
+        )
+        await r.publish(f"jobs:user:{user_b}", payload)
+        await r.aclose()
+
+        await asyncio.sleep(0.5)
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError):
+            await task
+
+        full = "".join(collected)
+        assert "event: connected" in full
+        assert '"completed"' not in full

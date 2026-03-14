@@ -29,7 +29,6 @@ def _start_postgres() -> str:
         return _pg_url
 
     from testcontainers.postgres import PostgresContainer
-
     container = PostgresContainer("postgres:16-alpine")
     container.start()
     host = container.get_container_host_ip()
@@ -64,7 +63,6 @@ def _start_redis() -> str:
         return _redis_url
 
     from testcontainers.core.container import DockerContainer
-
     container = DockerContainer("redis:7-alpine")
     container.with_exposed_ports(6379)
     container.start()
@@ -78,7 +76,9 @@ def _start_redis() -> str:
 def _stop_redis() -> None:
     global _redis_container, _redis_url
     if _redis_container is not None:
-        _redis_container.stop()  # type: ignore[union-attr]
+        from testcontainers.core.container import DockerContainer
+        assert isinstance(_redis_container, DockerContainer)
+        _redis_container.stop()
         _redis_container = None
         _redis_url = ""
 
@@ -97,7 +97,6 @@ def _start_minio() -> dict[str, Any]:
         return _minio_config
 
     from testcontainers.minio import MinioContainer
-
     container = MinioContainer("minio/minio:latest")
     container.start()
     _minio_config = container.get_config()

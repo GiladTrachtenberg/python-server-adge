@@ -14,7 +14,7 @@ from tortoise import Tortoise, connections
 from src.config import WorkerSettings
 from src.db import get_tortoise_config
 from src.models import JobStatus
-from src.storage import ensure_bucket, get_minio_client, upload_stream
+from src.storage import ensure_bucket, get_minio_client, presigned_url, upload_stream
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -38,19 +38,24 @@ def _generate_file(size: int) -> BytesIO:
     return buf
 
 
-async def _publish(redis_url: str, job_id: str, status: str) -> None:
-    """Publish a job status event to Redis pub/sub."""
+async def _publish(
+    redis_url: str,
+    channel: str,
+    payload: dict[str, str | None],
+) -> None:
+    """Publish a job event to a Redis pub/sub channel."""
     r = aioredis.from_url(redis_url)
     try:
-        payload = json.dumps({"job_id": job_id, "status": status})
-        await r.publish(f"jobs:{job_id}:status", payload)
+        await r.publish(channel, json.dumps(payload))
     finally:
         await r.aclose()
 
 
-async def _process(job_id: str, settings: WorkerSettings) -> None:
+async def _process(job_id: str, user_id: str, settings: WorkerSettings) -> None:
     """Async core of the process_job task."""
     from src.models import Job
+
+    channel = f"jobs:user:{user_id}"
 
     config = get_tortoise_config(settings.database_url)
     await Tortoise.init(config=config)
@@ -59,7 +64,11 @@ async def _process(job_id: str, settings: WorkerSettings) -> None:
 
         job.status = JobStatus.PROCESSING
         await job.save(update_fields=["status", "updated_at"])
-        await _publish(settings.redis_url, job_id, "processing")
+        await _publish(
+            settings.redis_url,
+            channel,
+            {"job_id": job_id, "status": "processing", "download_url": None},
+        )
 
         await asyncio.sleep(random.uniform(2, 4))
 
@@ -80,7 +89,13 @@ async def _process(job_id: str, settings: WorkerSettings) -> None:
         job.status = JobStatus.COMPLETED
         job.minio_object_key = key
         await job.save(update_fields=["status", "minio_object_key", "updated_at"])
-        await _publish(settings.redis_url, job_id, "completed")
+
+        download = presigned_url(minio, settings.minio_bucket, key)
+        await _publish(
+            settings.redis_url,
+            channel,
+            {"job_id": job_id, "status": "completed", "download_url": download},
+        )
 
     except Exception:
         logger.exception("Job %s failed", job_id)
@@ -89,7 +104,11 @@ async def _process(job_id: str, settings: WorkerSettings) -> None:
             job.status = JobStatus.FAILED
             job.error_message = "Processing failed"
             await job.save(update_fields=["status", "error_message", "updated_at"])
-            await _publish(settings.redis_url, job_id, "failed")
+            await _publish(
+                settings.redis_url,
+                channel,
+                {"job_id": job_id, "status": "failed", "download_url": None},
+            )
         except Exception:
             logger.exception("Failed to mark job %s as failed", job_id)
     finally:
@@ -97,9 +116,9 @@ async def _process(job_id: str, settings: WorkerSettings) -> None:
 
 
 @celery_app.task(name="process_job")
-def process_job(job_id: str) -> None:
+def process_job(job_id: str, user_id: str) -> None:
     """Celery entry point — bridges sync Celery with async internals."""
     from src.config import get_worker_settings
 
     settings = get_worker_settings()
-    asyncio.run(_process(job_id, settings))
+    asyncio.run(_process(job_id, user_id, settings))
