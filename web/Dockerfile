@@ -1,12 +1,20 @@
-FROM node:22-alpine AS build
+FROM node:25-alpine AS deps
 
 WORKDIR /app
 
-COPY package.json package-lock.json ./
-RUN npm ci
+RUN --mount=type=bind,source=package.json,target=package.json \
+    --mount=type=bind,source=package-lock.json,target=package-lock.json \
+    --mount=type=cache,target=/root/.npm \
+    npm ci
+
+FROM deps AS build
+
+WORKDIR /app
 
 COPY . .
-RUN npm run build
+COPY --from=deps /app/node_modules ./node_modules/
+
+RUN npx vite build
 
 FROM nginx:alpine AS runtime
 
