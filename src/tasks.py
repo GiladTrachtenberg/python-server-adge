@@ -14,7 +14,7 @@ from tortoise import Tortoise, connections
 from src.config import WorkerSettings
 from src.db import get_tortoise_config
 from src.models import JobStatus
-from src.storage import ensure_bucket, get_minio_client, presigned_url, upload_stream
+from src.storage import ensure_bucket, get_minio_client, upload_stream
 
 logger: logging.Logger = logging.getLogger(__name__)
 
@@ -90,11 +90,14 @@ async def _process(job_id: str, user_id: str, settings: WorkerSettings) -> None:
         job.minio_object_key = key
         await job.save(update_fields=["status", "minio_object_key", "updated_at"])
 
-        download = presigned_url(minio, settings.minio_bucket, key)
         await _publish(
             settings.redis_url,
             channel,
-            {"job_id": job_id, "status": "completed", "download_url": download},
+            {
+                "job_id": job_id,
+                "status": "completed",
+                "download_url": f"/api/v1/jobs/{job_id}/download",
+            },
         )
 
     except Exception:

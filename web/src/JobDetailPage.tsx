@@ -52,6 +52,24 @@ export function JobDetailPage({ token, jobId, onBack, onLogout }: Props) {
     }
   }, [sseEvent, job, token, jobId]);
 
+  async function handleDownload() {
+    if (!job?.download_url) return;
+    try {
+      const res = await fetch(job.download_url, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `job-${jobId}.bin`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError("Download failed");
+    }
+  }
+
   async function handleCancel() {
     setCancelling(true);
     setError(null);
@@ -120,14 +138,13 @@ export function JobDetailPage({ token, jobId, onBack, onLogout }: Props) {
             )}
 
             {job.download_url && (
-              <a
-                href={job.download_url}
+              <button
+                type="button"
                 className="btn-primary"
-                target="_blank"
-                rel="noopener noreferrer"
+                onClick={handleDownload}
               >
                 Download File
-              </a>
+              </button>
             )}
           </div>
         </div>

@@ -3,14 +3,14 @@ from __future__ import annotations
 from uuid import UUID
 
 from fastapi import APIRouter, Query, Request, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 
 from src.auth import CurrentUser, SettingsDep
 from src.jobs_schemas import job_to_response, make_pagination_meta
 from src.models import Job, JobStatus
 from src.rate_limit import GET_LIMIT, JOBS_CREATE_LIMIT, get_user_or_ip, limiter
 from src.schemas import ErrorBody, ErrorResponse
-from src.storage import get_minio_client, presigned_url
+from src.storage import download_stream, get_minio_client
 from src.tasks import process_job
 
 jobs_router = APIRouter(prefix="/jobs", tags=["jobs"])
@@ -79,15 +79,36 @@ async def get_job(
 
     download_url: str | None = None
     if job.status == JobStatus.COMPLETED and job.minio_object_key:
-        client = get_minio_client(settings)
-        download_url = presigned_url(
-            client,
-            settings.minio_bucket,
-            job.minio_object_key,
-        )
+        download_url = f"/api/v1/jobs/{job_id}/download"
 
     data = job_to_response(job, download_url=download_url)
     return JSONResponse(content={"data": data.model_dump(mode="json")})
+
+
+@jobs_router.get("/{job_id}/download", response_model=None)
+@limiter.limit(GET_LIMIT, key_func=get_user_or_ip)  # type: ignore[union-attr]
+async def download_job(
+    request: Request,
+    job_id: UUID,
+    user: CurrentUser,
+    settings: SettingsDep,
+) -> StreamingResponse | JSONResponse:
+    result = await _get_user_job(job_id, user.id)
+    if isinstance(result, JSONResponse):
+        return result
+    job = result
+
+    if job.status != JobStatus.COMPLETED or not job.minio_object_key:
+        return _error("not_ready", "File not available", status.HTTP_409_CONFLICT)
+
+    client = get_minio_client(settings)
+    return StreamingResponse(
+        download_stream(client, settings.minio_bucket, job.minio_object_key),
+        media_type="application/octet-stream",
+        headers={
+            "Content-Disposition": f'attachment; filename="job-{job_id}.bin"',
+        },
+    )
 
 
 @jobs_router.post("/{job_id}/cancel")

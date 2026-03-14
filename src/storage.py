@@ -7,6 +7,10 @@ from typing import TYPE_CHECKING
 from minio import Minio
 
 if TYPE_CHECKING:
+    from collections.abc import Generator
+
+    from urllib3 import BaseHTTPResponse
+
     from src.config import WorkerSettings
 
 
@@ -47,6 +51,23 @@ def upload_stream(
         length=length,
         content_type=content_type,
     )
+
+
+def download_stream(
+    client: Minio,
+    bucket: str,
+    key: str,
+    chunk_size: int = 1_048_576,
+) -> Generator[bytes]:
+    """Stream an object from MinIO in chunks."""
+    response: BaseHTTPResponse | None = None
+    try:
+        response = client.get_object(bucket, key)
+        yield from response.stream(chunk_size)
+    finally:
+        if response is not None:
+            response.close()
+            response.release_conn()
 
 
 def presigned_url(

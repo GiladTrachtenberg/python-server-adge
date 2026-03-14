@@ -170,8 +170,7 @@ class TestJobLifecycle:
         assert resp.status_code == 200
         data = resp.json()["data"]
         assert data["status"] == "completed"
-        assert data["download_url"] is not None
-        assert "X-Amz-Signature" in data["download_url"]
+        assert data["download_url"] == f"/api/v1/jobs/{job_id}/download"
 
 
 class TestSSE:
