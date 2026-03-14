@@ -4,20 +4,31 @@
 
 ## Current Phase
 
-**Phase 4: Refinement** — Step 13
+**Phase 4: Refinement** — Step 14
 
 ## Progress
 
 | Step | Description                                      | Status      |
 | ---- | ------------------------------------------------ | ----------- |
 | 1-12 | Phases 1-3 (API, Frontend, Kubernetes)           | DONE        |
-| 13   | Refactor infra charts to direct Helm repo sources | NOT STARTED |
+| 13   | Refactor infra charts to direct Helm repo sources | DONE        |
+| 14   | User-scoped SSE, drop polling                    | NOT STARTED |
 
-## Up Next — Step 13: Infra Chart Refactor
+## Up Next — Step 14: User-Scoped SSE (Drop Polling)
 
-- Refactor Redis/MinIO from wrapper charts to direct Helm repo sources in ApplicationSet
-- Remove `deploy/infra/redis/` and `deploy/infra/minio/` wrapper charts
-- Values specified inline via `valuesObject` in ApplicationSet generator
+Replace per-job SSE + list-page polling with a single user-scoped SSE stream.
+
+**Backend**:
+- New `/api/v1/jobs/events` SSE endpoint — streams all job events for the user
+- Worker publishes to `jobs:user:{user_id}` channel (not just per-job)
+- Payload includes `download_url` on completion (avoid extra fetch)
+- Remove per-job SSE endpoint (`/jobs/{id}/events`), keep `CurrentUserSSE`
+
+**Frontend**:
+- Shared `EventSource` context — single SSE connection for entire app
+- JobsPage: real-time status updates via SSE, remove polling entirely
+- JobDetailPage: filter SSE messages by job ID, drop per-job EventSource
+- `EventSource` auto-reconnects natively (no custom backoff needed)
 
 ## Completed
 
@@ -31,6 +42,7 @@
 - **Step 10**: Single ApplicationSet with RollingSync strategy (progressive sync). Go template conditionals for single-source (infra) vs multi-source (apps). Per-component release names (removed hardcoded component suffix from templates). Bootstrap applies sealed secrets + ApplicationSet.
 - **Step 11**: Fixed CI: `--extra dev` for ruff/mypy/pytest, sequential job deps (lint→type-check→test→build), lowercase GHCR image names, bumped action versions (checkout@v6, setup-uv@v7, setup-node@v6, buildx@v4, login@v4). Added exponential-backoff polling to JobsPage. Web NodePort for Kind access.
 - **Step 12**: E2E validation on Kind. Bootstrap creates 3-node cluster, installs operators, seals secrets, deploys ApplicationSet. Validate script checks ArgoCD sync, pod health, full user flow (register→login→job→SSE→download→refresh). Fixed: multi-arch images, templatePatch for goTemplate, service name mismatches, MinIO memory, Redis chart v23, migration init container for PG readiness, web init container for API readiness, consolidated secrets, split WorkerSettings/Settings.
+- **Step 13**: Removed Redis/MinIO wrapper charts. Direct Helm repo sources in ApplicationSet (`chartRepo`/`chart`/`chartVersion` + inline `helmValues`). Three-branch templatePatch: chart-repo (infra), multi-source (apps), git-path (CNPG).
 
 ## Blocked
 

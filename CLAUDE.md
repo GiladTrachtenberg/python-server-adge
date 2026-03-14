@@ -62,6 +62,7 @@ Kind (K8s) with ArgoCD. Interview-grade showcase of async job processing.
 | ApplicationSet      | Infra: `deploy/argocd/applicationset.yaml`     | full file |
 | Progressive sync    | `docs/ARCHITECTURE.md` D30                     | —         |
 | Direct Helm sources | `docs/ARCHITECTURE.md` D34                     | —         |
+| User-scoped SSE     | `docs/ARCHITECTURE.md` D35                     | —         |
 
 ## Code Standards
 

@@ -200,14 +200,10 @@ is reserved (user's client occupies it).
 
 → `python-server-infra/deploy/kind/kind-config.yaml`, `bootstrap.sh`
 
-### D25: Wrapper Charts for Infrastructure Dependencies
+### D25: ~~Wrapper Charts for Infrastructure Dependencies~~ (Superseded by D34)
 
-Redis and MinIO are deployed as small "wrapper" Helm charts that declare the
-upstream chart (bitnami/redis, minio/minio) as a dependency. This lets ArgoCD
-manage them as Helm releases with pinned versions and custom values, without
-vendoring the upstream charts. `helm dependency build` resolves them.
-
-→ `python-server-infra/deploy/infra/redis/Chart.yaml`, `minio/Chart.yaml`
+Originally Redis and MinIO used wrapper Helm charts. Replaced with direct Helm
+repo sources in the ApplicationSet — see D34.
 
 ### D26: Two-Repo Split (App + Infra)
 
@@ -297,6 +293,26 @@ charts. We only pass values, so direct sources are simpler. CNPG cluster stays
 as a path-based source since it's a raw CRD manifest, not a Helm chart.
 
 → Infra: `deploy/argocd/applicationset.yaml` (redis/minio sources updated)
+
+### D35: User-Scoped SSE (Drop Polling)
+
+Per-job SSE (detail page) + exponential-backoff polling (list page) replaced by a
+single user-scoped SSE stream. Motivation:
+
+1. **Single connection** — One `EventSource` per user session, not per job.
+   Multiplexes all job events for that user over one stream.
+2. **List page gets real-time** — Polling (5s→60s backoff) meant stale UI. SSE
+   pushes status changes instantly to both list and detail views.
+3. **Payload includes download_url** — Eliminates the extra `GET /jobs/{id}`
+   refetch after "completed" event.
+4. **No new protocol** — SSE stays on HTTP/1.1, auto-reconnects natively via
+   `EventSource`, no nginx upgrade config needed (already has SSE proxy rules).
+
+Worker publishes to a user-scoped Redis channel (`jobs:user:{user_id}`). The SSE
+endpoint subscribes to that channel and forwards events. Auth via query-param
+token (same `CurrentUserSSE` dependency as before).
+
+→ `src/sse.py`, `web/src/hooks/useJobEvents.ts`
 
 ### D7: Toolchain Selection
 
